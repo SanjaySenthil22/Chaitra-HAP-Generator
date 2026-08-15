@@ -77,7 +77,19 @@ output):
 ```bash
 python3 chaitra_ward_pipeline.py --city <City> --project <your-gcp-project>
 python3 assemble_hap_prompt.py --city <City>       # builds the grounding data + LLM prompt
-# draft outputs/<city>_hap_draft.md by hand, or via outputs/<city>_hap_prompt.md in claude.ai
+```
+
+**Without an Anthropic key**, replace `generate_hap.py`'s drafting step with
+a manual one instead of running the full pipeline:
+1. Open `outputs/<city>_hap_prompt.md` and copy its full contents.
+2. Paste it as a single message into [claude.ai](https://claude.ai) (or any
+   other capable chat LLM).
+3. Copy the reply back out — the document only, no "Here's your HAP:"
+   preamble or code-fence wrapper around it — and save it as
+   `outputs/<city>_hap_draft.md`.
+
+Then continue the pipeline as normal:
+```bash
 python3 verify_hap_numbers.py --draft outputs/<city>_hap_draft.md --data outputs/<city>_hap_data.md
 python3 make_hap_maps.py --city <City> --project <your-gcp-project> --insert
 python3 render_hap_docx.py --city <City>
