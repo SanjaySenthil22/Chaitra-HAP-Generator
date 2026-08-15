@@ -1,0 +1,14 @@
+# Python dependencies for the CHAITRA HAP pipeline.
+# Install with: pip3 install -r requirements.txt
+#
+# Also needed, but NOT pip-installable (system packages):
+#   - pandoc  (markdown -> .docx conversion; brew install pandoc / apt install pandoc)
+#
+# earthengine-api requires one-time browser authentication per machine:
+#   earthengine authenticate
+# (see README for full Earth Engine / GCP project setup)
+
+earthengine-api>=1.7
+anthropic>=0.40.0
+matplotlib>=3.8
+python-docx>=1.2

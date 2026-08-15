@@ -1,0 +1,22 @@
+{
+  "LST_percentiles": {
+    "LST_mean": 43.15337335349445,
+    "LST_p50": 43.34381163671369,
+    "LST_p90": 44.59472791454519,
+    "LST_p95": 44.84342735883588,
+    "LST_p99": 45.468096650187604
+  },
+  "analysis_window": "2022-04-01 to 2024-07-31, summer (Apr-Jul)",
+  "area_km2": 68.96251101990785,
+  "city": "Varanasi",
+  "cityMeanAlbedo": 0.16276058597810633,
+  "cityMeanLST_C": 43.14825579932099,
+  "cityMeanNightLST_C": 21.120795801903032,
+  "cityMeanRoofAlbedo": 0.17029779186938243,
+  "coolReference_C": 40.593466688148006,
+  "exceedance_area_km2_above_C": {
+    "40": 65.69853002494153,
+    "45": 2.450429722947298,
+    "50": 0
+  }
+}
