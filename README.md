@@ -21,64 +21,47 @@ export ANTHROPIC_API_KEY=sk-ant-...
 python3 generate_hap.py --city Agra --project <your-gcp-project>
 ```
 
-Produces `outputs/Agra_HAP_Draft.docx`. See **Setup** below for what
-`<your-gcp-project>` needs and how to get ward-asset access.
+`Agra` is just an example — any of the 13 configured cities works the same
+way (see Usage below). Produces `outputs/Agra_HAP_Draft.docx`. See **Setup**
+below for what `<your-gcp-project>` needs and how to get ward-asset access.
 
 ## Setup
 
-There are no credential files anywhere in this repo (no `.env`, no config
-with a key field) — every credential is either a shell environment variable
-or a one-time browser login. Checklist for a first-time setup:
+**Python packages** — `pip3 install -r requirements.txt` (earthengine-api,
+anthropic, matplotlib, python-docx).
 
-1. **Python packages** — `pip3 install -r requirements.txt` (earthengine-api,
-   anthropic, matplotlib, python-docx).
+**pandoc** — converts the drafted markdown to `.docx`. Not a Python package;
+install via `brew install pandoc` (macOS) or your system's package manager.
 
-2. **pandoc** — converts the drafted markdown to `.docx`. Not a Python
-   package; install via `brew install pandoc` (macOS) or your system's
-   package manager.
-
-3. **Earth Engine login** — run `earthengine authenticate` once. It opens a
-   browser, you sign in with your Google account, and the resulting token is
-   cached by the `earthengine-api` library itself (`~/.config/earthengine/`)
-   — nothing in this repo to edit.
-
-4. **Your own GCP project**, with the Earth Engine API enabled, tied to the
-   account you just authenticated. This is the *compute* identity — any lab
-   member can create their own. Pass its ID via `--project <id>` on the
-   command line each time, **or** set it once so you never have to type it:
+**Google Earth Engine** — the ward-level computation runs on GEE, and needs
+two things, which are separate:
+1. **A GCP project with the Earth Engine API enabled**, authenticated
+   locally via `earthengine authenticate` (one-time, opens a browser). This
+   is the compute identity that runs every `--project <id>` command below —
+   any lab member can set up their own. To skip typing `--project` every
+   run, set it once:
    ```bash
    export CHAITRA_GEE_PROJECT=<your-gcp-project-id>   # add to ~/.zshrc to persist
    ```
-   (every script's `--project` flag defaults to this env var if set —
-   see e.g. `chaitra_ward_pipeline.py` line 1324).
+   (every script's `--project` flag falls back to this env var — see e.g.
+   `chaitra_ward_pipeline.py` line 1324).
+2. **Read access to the ward-boundary assets**, which live in CHAITRA's own
+   GCP project (`projects/gee-piyushn44/assets/...`, see `CITY_CONFIGS` in
+   `chaitra_ward_pipeline.py`, line 39). Request read access from the
+   CHAITRA project lead for the Google account authenticated above. The
+   compute project and the data project don't need to be the same one.
 
-5. **Read access to the ward-boundary assets** — these live in CHAITRA's own
-   GCP project (`projects/gee-piyushn44/assets/...`, listed in
-   `CITY_CONFIGS` near the top of `chaitra_ward_pipeline.py`, currently line
-   39). This is *data* access, separate from #4's compute project. Email the
-   CHAITRA project lead and ask them to grant read access to the ward assets
-   for the Google account you authenticated in step 3. Nothing to configure
-   locally once granted — Earth Engine checks it server-side.
-
-6. **Anthropic API key** — required only for the LLM drafting step
-   (`generate_hap.py`, or any run using web search). Get one at
-   [console.anthropic.com](https://console.anthropic.com) (pay-as-you-go, no
-   subscription), then:
-   ```bash
-   export ANTHROPIC_API_KEY=sk-ant-...   # add to ~/.zshrc to persist
-   ```
-   Cost is roughly $0.50–1.00 per city per run (Opus-tier tokens + a handful
-   of web searches for local context facts). Without a key, everything
-   except the drafting step still works — you can assemble the grounding
-   data and prompt, then draft by hand or paste the prompt into claude.ai.
-
-**Adding a new city later:** the only file you ever need to hand-edit is
-`CITY_CONFIGS` in `chaitra_ward_pipeline.py` — add one line with the city's
-ward-asset path, UTM zone, and area:
-```python
-'NewCity': {'assetPath': 'projects/gee-piyushn44/assets/NewCity_Ward_Map', 'utmZone': 'EPSG:32643', 'areaKm2': 123},
+**Anthropic API key** — required only for the LLM drafting step
+(`generate_hap.py`, or any run using web search). Get one at
+[console.anthropic.com](https://console.anthropic.com) (pay-as-you-go, no
+subscription):
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...   # add to ~/.zshrc to persist
 ```
-Everything downstream (prompt, verification, maps, docx) is city-agnostic.
+Cost is roughly $0.50–1.00 per city per run (Opus-tier tokens + a handful
+of web searches for local context facts). Without a key, everything except
+the drafting step still works — assemble the grounding data and prompt,
+then draft by hand or paste the prompt into claude.ai.
 
 ## Usage
 
