@@ -187,6 +187,15 @@ terms to a "High" ward in another.
   likely — see the `has_census` / column-skipping handling in
   `chaitra_ward_pipeline.py` for how Varanasi's schema differences were
   handled).
-- `chaitra_code_findings.md` §7–8 document two bugs found and fixed in
-  CHAITRA's own source formulas (canopy-deficit inflation, ward-number
-  field selection) while porting it to Python — worth reporting upstream.
+- `chaitra_code_findings.md` §7–9 document bugs found and fixed in
+  CHAITRA's own source/data while porting it to Python (canopy-deficit
+  inflation, ward-number field selection) — worth reporting upstream.
+- **⚠️ Jaipur and Delhi cannot generate a HAP yet.** Both ward-boundary
+  assets have wards split across multiple polygon features (91 of
+  Jaipur's 250, 2 of Delhi's 253) sharing one real ward ID — the pipeline
+  correctly detects this and raises `RuntimeError` rather than exporting
+  duplicated rows, but nobody's implemented the geometry-merge step this
+  needs yet. Full detail and root cause in `chaitra_code_findings.md` §9.
+  All 11 other cities were directly audited against their live GEE assets
+  and confirmed unaffected by this or the underlying wrong-field-name bug
+  §9 also fixes.

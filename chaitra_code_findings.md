@@ -256,3 +256,51 @@ codes, not municipal ward numbers — reviewers flagged them. The asset also
 carries `sourcewa_1` (municipal ward number, pairs with the ward name) and
 `NNVNS`. `load_boundaries` now prefers WARD_NO → ward_no → sourcewa_1 →
 NNVNS before falling back to ward_lgd_c. Varanasi wards now number 1-90.
+
+## §9 Jaipur & Delhi ward assets — wrong ID field (found 2026-08, partially fixed)
+
+**Audited all 13 configured cities' actual asset schemas directly against
+GEE** (feature count vs. distinct ID count for whichever field
+`load_boundaries` would match). 11 of 13 are clean 1:1. Two were not:
+
+- **Jaipur**: none of `WARD_NO`/`ward_no`/`sourcewa_1`/`NNVNS`/`ward_lgd_c`/
+  `id` exist on this asset at all. `_standardize` fell all the way through
+  to `system:index` (an internal per-feature row counter, not a ward
+  number), silently collapsing 250 features onto 100 fake "WARD_NO" values
+  (`0` alone claimed 97 rows). The asset's real field is **`wardcode`**
+  (values 1-150).
+- **Delhi**: this one is worse because it's silent — `id` *is* present and
+  *is* unique (253 distinct values across 253 features), so it produced no
+  collision and no error. But `id` values are unrelated internal composite
+  codes (`800441113`, `80044199`, …), not ward numbers. The real field,
+  again **`wardcode`** (paired with a `standwardn` name field — "Adarsh
+  Nagar", "Dhirpur", etc.), was sitting right there unused. Every Delhi HAP
+  generated before this fix would have confidently labeled wards with
+  numbers like "Ward 800441113" — wrong, but nothing would have flagged it.
+
+**Fixed**: added `wardcode` to the priority chain, positioned below
+`ward_lgd_c` and above `id`. This is provably safe for every other
+city — the 11 already-correct cities all resolve via a field earlier in
+the chain and never reach this far down, so their WARD_NO is byte-for-byte
+unchanged (verified directly: re-ran `load_boundaries` for all 11 and
+confirmed identical feature counts before/after). Bangalore's `id` field
+was separately checked against `proposed_w`/`name_en` and confirmed
+genuinely correct — not affected either way.
+
+**Not fixed — wards split across multiple polygon features.** Fixing the
+field made Jaipur's and Delhi's *numbers* correct, but didn't merge
+geometry: **91 of Jaipur's 250 features** and **2 of Delhi's 253** are
+non-contiguous ward fragments sharing one real `wardcode`, each still
+counted as a separate row. `load_boundaries` now raises `RuntimeError` for
+both cities rather than silently exporting duplicate rows — this was a
+deliberate choice over a partial fix, since a duplicated-but-plausible-
+looking ward table is exactly the kind of error that's hard to catch by
+eye in a downstream HAP. **Both cities are blocked from generating a HAP
+until someone adds a geometry-dissolve step** (merge features sharing a
+WARD_NO into one, before any per-ward stat is computed) — this touches
+every layer's `reduceRegions` call, not just boundary loading, so it needs
+its own careful pass rather than a quick patch. Worth reporting upstream to
+Piyush too: two different assets in the same catalog missing the standard
+`WARD_NO`/`ward_no` field naming, one of them silently mislabeled rather
+than erroring, suggests the ingestion process for these two wasn't
+consistent with the rest.

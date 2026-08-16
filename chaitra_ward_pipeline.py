@@ -176,6 +176,13 @@ def load_boundaries(city):
         # with the ward name; 'ward_lgd_c' is a 5-digit LGD code (26xxx) that
         # reviewers flagged as NOT being a ward number — keep it only as a
         # last-resort fallback.
+        # 'wardcode' (Jaipur, Delhi assets) sits below every field above on
+        # purpose: every city already resolved by WARD_NO/ward_no/
+        # sourcewa_1/NNVNS/ward_lgd_c stops before reaching it, so adding it
+        # cannot change their WARD_NO. It sits above 'id' because Delhi has
+        # both — its 'id' is an unrelated internal composite code (e.g.
+        # '800441113'), not a ward number, while 'wardcode' is the real one
+        # (see chaitra_code_findings.md).
         ward_no_raw = ee.Algorithms.If(
             names.contains('WARD_NO'), f.get('WARD_NO'),
             ee.Algorithms.If(
@@ -186,8 +193,10 @@ def load_boundaries(city):
                         names.contains('NNVNS'), f.get('NNVNS'),
                         ee.Algorithms.If(
                             names.contains('ward_lgd_c'), f.get('ward_lgd_c'),
-                            ee.Algorithms.If(names.contains('id'), f.get('id'),
-                                             f.get('system:index')))))))
+                            ee.Algorithms.If(
+                                names.contains('wardcode'), f.get('wardcode'),
+                                ee.Algorithms.If(names.contains('id'), f.get('id'),
+                                                 f.get('system:index'))))))))
         ward_no_str = ee.String(ward_no_raw)
         has_digits = ward_no_str.match('[0-9]+').length().gt(0)
         ward_no = ee.Number(ee.Algorithms.If(
@@ -215,7 +224,35 @@ def load_boundaries(city):
             'area_km2': area,
         })
 
-    return wards.map(_standardize), cfg
+    standardized = wards.map(_standardize)
+
+    # Guard against silent ward-ID collisions: if this asset's real ID field
+    # isn't one of the names in the priority chain above, _standardize()
+    # falls through to system:index — an internal row counter, not a ward
+    # number — which can silently collapse distinct wards onto the same
+    # WARD_NO instead of failing. Also catches wards genuinely split across
+    # multiple polygon features sharing one real ward ID (true for 91 of
+    # Jaipur's 250 features and 2 of Delhi's 253 — those need a geometry
+    # merge step this pipeline doesn't yet have; see chaitra_code_findings.md
+    # and the README's Known Limitations). Fail loudly here instead of
+    # producing a corrupted or duplicated ward CSV.
+    n_features = standardized.size().getInfo()
+    n_distinct = len(set(standardized.aggregate_array('WARD_NO').getInfo()))
+    if n_distinct != n_features:
+        raise RuntimeError(
+            f"{city}: ward asset has {n_features} features but only "
+            f"{n_distinct} distinct WARD_NO values after standardization — "
+            f"either the ward-ID field priority chain in _standardize() "
+            f"didn't find a real per-ward identifier for this asset, or "
+            f"some wards are split across multiple polygon features sharing "
+            f"one ID (needs a geometry-merge step not yet implemented). "
+            f"Inspect its actual "
+            f"property names with "
+            f"ee.FeatureCollection(cfg['assetPath']).first().propertyNames()"
+            f".getInfo() and add the correct field name to the chain."
+        )
+
+    return standardized, cfg
 
 
 # ───────────────────────────────────────────────────────────────────────────────
