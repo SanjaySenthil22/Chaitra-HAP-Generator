@@ -44,7 +44,7 @@ two things, which are separate:
    export CHAITRA_GEE_PROJECT=<your-gcp-project-id>   # add to ~/.zshrc to persist
    ```
    (every script's `--project` flag falls back to this env var — see e.g.
-   `chaitra_ward_pipeline.py` line 1324).
+   `chaitra_ward_pipeline.py` line 1361).
 2. **Read access to the ward-boundary assets**, which live in CHAITRA's own
    GCP project (`projects/gee-piyushn44/assets/...`, see `CITY_CONFIGS` in
    `chaitra_ward_pipeline.py`, line 39). Request read access from the
@@ -182,20 +182,20 @@ terms to a "High" ward in another.
 
 ## Known Limitations / Open Questions
 
-- Only Agra and Varanasi have been run end-to-end and reviewed; the other
-  11 configured cities are untested (different ward-asset schemas are
-  likely — see the `has_census` / column-skipping handling in
-  `chaitra_ward_pipeline.py` for how Varanasi's schema differences were
-  handled).
-- `chaitra_code_findings.md` §7–9 document bugs found and fixed in
-  CHAITRA's own source/data while porting it to Python (canopy-deficit
-  inflation, ward-number field selection) — worth reporting upstream.
-- **⚠️ Jaipur and Delhi cannot generate a HAP yet.** Both ward-boundary
+- Only Agra and Varanasi have been run end-to-end and reviewed. The other
+  9 configured cities (Bhubaneswar, Kolkata, Surat, Lucknow, Chennai,
+  Ahmedabad, Mumbai, Hyderabad, Bangalore) have had their ward-boundary
+  assets directly audited against live GEE and confirmed to resolve ward
+  IDs correctly (see `chaitra_code_findings.md` §9), but none has actually
+  been run through the full pipeline and had its output reviewed yet —
+  schema-clean isn't the same as HAP-content-reviewed.
+- **Jaipur and Delhi cannot generate a HAP yet.** Both ward-boundary
   assets have wards split across multiple polygon features (91 of
   Jaipur's 250, 2 of Delhi's 253) sharing one real ward ID — the pipeline
   correctly detects this and raises `RuntimeError` rather than exporting
   duplicated rows, but nobody's implemented the geometry-merge step this
   needs yet. Full detail and root cause in `chaitra_code_findings.md` §9.
-  All 11 other cities were directly audited against their live GEE assets
-  and confirmed unaffected by this or the underlying wrong-field-name bug
-  §9 also fixes.
+- `chaitra_code_findings.md` §7–9 document bugs found and fixed in
+  CHAITRA's own source/data while porting it to Python (canopy-deficit
+  inflation, ward-ID field selection — twice, Varanasi and Jaipur/Delhi) —
+  worth reporting upstream.
